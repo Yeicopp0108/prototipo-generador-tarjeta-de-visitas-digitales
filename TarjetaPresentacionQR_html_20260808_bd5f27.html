@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Tarjetas de Visita Digitales</title>
+    
+    <!-- Fuente Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    <!-- Font Awesome para íconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    
+    <!-- SOLO necesitamos html2canvas para la descarga (la librería QR ya no hace falta) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+
+    <style>
+        /* ----- VARIABLES GLOBALES (Modo Claro por defecto) ----- */
+        :root {
+            --bg-body: #f4f6fb;
+            --bg-card: #ffffff;
+            --bg-input: #ffffff;
+            --text-primary: #1a1a2e;
+            --text-secondary: #4a4a6a;
+            --text-muted: #8888a8;
+            --border-color: #e2e8f0;
+            --shadow: 0 20px 60px rgba(0, 0, 0, 0.08);
+            --shadow-card: 0 15px 40px rgba(0, 0, 0, 0.1);
+            --accent: #6c5ce7;
+            --accent-hover: #5a4bd1;
+            --gradient: linear-gradient(135deg, #6c5ce7 0%, #a29bfe 100%);
+            --qr-bg: #ffffff;
+            --radius: 24px;
+            --transition: 0.3s ease;
+        }
+
+        /* ----- MODO OSCURO ----- */
+        [data-theme="dark"] {
+            --bg-body: #0f0f1a;
+            --bg-card: #1a1a2e;
+            --bg-input: #252540;
+            --text-primary: #edf2f7;
+            --text-secondary: #cbd5e0;
+            --text-muted: #718096;
+            --border-color: #2d3748;
+            --shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+            --shadow-card: 0 15px 40px rgba(0, 0, 0, 0.5);
+            --qr-bg: #ffffff;
+        }
+
+        /* ----- RESET Y BASE ----- */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-body);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem 1.5rem;
+            transition: background var(--transition), color var(--transition);
+        }
+
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 3rem;
+            align-items: start;
+        }
+
+        /* ----- BOTÓN TOGGLE (modo oscuro) ----- */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            font-size: 1.3rem;
+            cursor: pointer;
+            box-shadow: var(--shadow);
+            transition: all var(--transition);
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.05);
+            border-color: var(--accent);
+        }
+
+        /* ----- FORMULARIO ----- */
+        .form-section {
+            background: var(--bg-card);
+            padding: 2rem 2rem 2.5rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            transition: background var(--transition), border var(--transition);
+        }
+
+        .form-section h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 0.3rem;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .form-section p.sub {
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+            -webkit-text-fill-color: var(--text-muted);
+        }
+
+        .form-group {
+            margin-bottom: 1.2rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.4rem;
+            letter-spacing: 0.3px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            background: var(--bg-input);
+            border: 1.5px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 0.95rem;
+            font-family: 'Inter', sans-serif;
+            color: var(--text-primary);
+            transition: all var(--transition);
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(108, 92, 231, 0.15);
+        }
+
+        .form-group input::placeholder {
+            color: var(--text-muted);
+            opacity: 0.6;
+        }
+
+        .btn-generate {
+            width: 100%;
+            padding: 1rem;
+            border: none;
+            border-radius: 14px;
+            font-size: 1rem;
+            font-weight: 700;
+            color: #fff;
+            background: var(--gradient);
+            cursor: pointer;
+            transition: all var(--transition);
+            margin-top: 0.5rem;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 0.5px;
+        }
+
+        .btn-generate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(108, 92, 231, 0.3);
+        }
+
+        /* ----- VISTA PREVIA DE LA TARJETA ----- */
+        .preview-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .card-wrapper {
+            background: var(--bg-card);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            width: 100%;
+            max-width: 420px;
+            transition: background var(--transition), border var(--transition);
+        }
+
+        .card-preview {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 2rem 1.8rem 1.8rem;
+            box-shadow: var(--shadow-card);
+            border: 1px solid rgba(108, 92, 231, 0.15);
+            transition: background var(--transition);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Pequeño detalle decorativo */
+        .card-preview::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 5px;
+            background: var(--gradient);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1.2rem;
+        }
+
+        .avatar {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            background: var(--gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #fff;
+            flex-shrink: 0;
+            text-transform: uppercase;
+            box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
+        }
+
+        .card-body {
+            margin-bottom: 1.5rem;
+        }
+
+        .card-body .name {
+            font-size: 1.6rem;
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 0.2rem;
+            color: var(--text-primary);
+        }
+
+        .card-body .title {
+            font-size: 1rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 0.2rem;
+        }
+
+        .card-body .company {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .card-divider {
+            height: 1px;
+            background: var(--border-color);
+            margin: 1.2rem 0;
+            opacity: 0.5;
+        }
+
+        .card-contact {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.6rem 0.8rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .contact-item {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-decoration: none;
+            transition: color var(--transition);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .contact-item i {
+            width: 18px;
+            color: var(--accent);
+            font-size: 0.9rem;
+            flex-shrink: 0;
+        }
+
+        .contact-item a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .contact-item a:hover {
+            color: var(--accent);
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0.5rem;
+        }
+
+        .card-footer .label {
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+        }
+
+        #qrcode img {
+            display: block !important;
+            width: 100px !important;
+            height: 100px !important;
+            border-radius: 12px;
+            background: #fff;
+            padding: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        /* ----- BOTÓN DESCARGAR ----- */
+        .btn-download {
+            background: transparent;
+            border: 2px solid var(--accent);
+            color: var(--accent);
+            padding: 0.8rem 2rem;
+            border-radius: 40px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all var(--transition);
+            font-family: 'Inter', sans-serif;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.6rem;
+            background: var(--bg-card);
+            box-shadow: var(--shadow);
+        }
+
+        .btn-download:hover {
+            background: var(--accent);
+            color: #fff;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(108, 92, 231, 0.3);
+        }
+
+        .btn-download:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* ----- RESPONSIVE ----- */
+        @media (max-width: 900px) {
+            .container {
+                grid-template-columns: 1fr;
+                gap: 2rem;
+                max-width: 500px;
+            }
+            .form-section {
+                order: 2;
+            }
+            .preview-section {
+                order: 1;
+            }
+            .card-wrapper {
+                max-width: 100%;
+            }
+            .theme-toggle {
+                top: 10px;
+                right: 10px;
+                width: 42px;
+                height: 42px;
+                font-size: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 1rem;
+            }
+            .form-section {
+                padding: 1.5rem;
+            }
+            .card-preview {
+                padding: 1.5rem 1.2rem;
+            }
+            .card-contact {
+                grid-template-columns: 1fr;
+            }
+            #qrcode img {
+                width: 80px !important;
+                height: 80px !important;
+            }
+            .card-body .name {
+                font-size: 1.3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Botón de modo oscuro/claro -->
+    <button class="theme-toggle" id="themeToggle" aria-label="Cambiar tema">
+        <i class="fas fa-moon"></i>
+    </button>
+
+    <div class="container">
+        <!-- COLUMNA IZQUIERDA: FORMULARIO -->
+        <section class="form-section">
+            <h2>✨ Tu tarjeta digital</h2>
+            <p class="sub">Completa los datos y genera tu código QR profesional.</p>
+
+            <div class="form-group">
+                <label><i class="fas fa-user" style="margin-right: 6px;"></i> Nombre completo</label>
+                <input type="text" id="fullName" placeholder="ej. Ana Martínez" value="Ana Martínez">
+            </div>
+
+            <div class="form-group">
+                <label><i class="fas fa-briefcase" style="margin-right: 6px;"></i> Cargo / Puesto</label>
+                <input type="text" id="jobTitle" placeholder="ej. Frontend Developer" value="Frontend Developer">
+            </div>
+
+            <div class="form-group">
+                <label><i class="fas fa-building" style="margin-right: 6px;"></i> Empresa</label>
+                <input type="text" id="company" placeholder="ej. Tech Solutions" value="Tech Solutions">
+            </div>
+
+            <div class="form-group">
+                <label><i class="fas fa-envelope" style="margin-right: 6px;"></i> Email</label>
+                <input type="email" id="email" placeholder="ej. ana@correo.com" value="ana@correo.com">
+            </div>
+
+            <div class="form-group">
+                <label><i class="fas fa-phone" style="margin-right: 6px;"></i> Teléfono</label>
+                <input type="tel" id="phone" placeholder="ej. +34 600 000 000" value="+34 600 000 000">
+            </div>
+
+            <div class="form-group">
+                <label><i class="fab fa-github" style="margin-right: 6px;"></i> GitHub (URL)</label>
+                <input type="url" id="githubUrl" placeholder="https://github.com/tuusuario" value="https://github.com/anamartinez">
+            </div>
+
+            <div class="form-group">
+                <label><i class="fab fa-linkedin" style="margin-right: 6px;"></i> LinkedIn (URL)</label>
+                <input type="url" id="linkedinUrl" placeholder="https://linkedin.com/in/tuusuario" value="https://linkedin.com/in/anamartinez">
+            </div>
+
+            <button class="btn-generate" id="generateBtn">
+                <i class="fas fa-sync-alt" style="margin-right: 8px;"></i> Generar Tarjeta
+            </button>
+        </section>
+
+        <!-- COLUMNA DERECHA: VISTA PREVIA -->
+        <section class="preview-section">
+            <div class="card-wrapper">
+                <div class="card-preview" id="cardPreview">
+                    <!-- HEADER: Avatar + QR -->
+                    <div class="card-header">
+                        <div class="avatar" id="avatarDisplay">A</div>
+                        <div id="qrcode">
+                            <!-- Aquí se insertará la imagen QR generada por la API -->
+                        </div>
+                    </div>
+
+                    <!-- BODY: Datos -->
+                    <div class="card-body">
+                        <div class="name" id="displayName">Ana Martínez</div>
+                        <div class="title" id="displayTitle">Frontend Developer</div>
+                        <div class="company" id="displayCompany">Tech Solutions</div>
+                    </div>
+
+                    <div class="card-divider"></div>
+
+                    <!-- CONTACTOS -->
+                    <div class="card-contact">
+                        <span class="contact-item"><i class="fas fa-envelope"></i> <span id="displayEmail">ana@correo.com</span></span>
+                        <span class="contact-item"><i class="fas fa-phone"></i> <span id="displayPhone">+34 600 000 000</span></span>
+                        <span class="contact-item"><i class="fab fa-github"></i> <a href="#" id="displayGithubLink" target="_blank">github.com/...</a></span>
+                        <span class="contact-item"><i class="fab fa-linkedin"></i> <a href="#" id="displayLinkedinLink" target="_blank">linkedin.com/...</a></span>
+                    </div>
+
+                    <!-- FOOTER: texto + QR label -->
+                    <div class="card-footer">
+                        <span class="label">Digital Business Card</span>
+                        <span style="font-size:0.6rem; color: var(--text-muted);">Escanear QR</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Botón Descargar -->
+            <button class="btn-download" id="downloadBtn">
+                <i class="fas fa-download"></i> Descargar PNG
+            </button>
+        </section>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // ----- ELEMENTOS DOM -----
+            const formInputs = {
+                name: document.getElementById('fullName'),
+                title: document.getElementById('jobTitle'),
+                company: document.getElementById('company'),
+                email: document.getElementById('email'),
+                phone: document.getElementById('phone'),
+                github: document.getElementById('githubUrl'),
+                linkedin: document.getElementById('linkedinUrl')
+            };
+
+            const displayEls = {
+                name: document.getElementById('displayName'),
+                title: document.getElementById('displayTitle'),
+                company: document.getElementById('displayCompany'),
+                email: document.getElementById('displayEmail'),
+                phone: document.getElementById('displayPhone'),
+                githubLink: document.getElementById('displayGithubLink'),
+                linkedinLink: document.getElementById('displayLinkedinLink'),
+                avatar: document.getElementById('avatarDisplay')
+            };
+
+            const qrContainer = document.getElementById('qrcode');
+            const cardPreview = document.getElementById('cardPreview');
+            const generateBtn = document.getElementById('generateBtn');
+            const downloadBtn = document.getElementById('downloadBtn');
+
+            // ----- FUNCIÓN PARA ACTUALIZAR LA TARJETA (TEXTO Y QR) -----
+            function updateCard() {
+                // 1. Leer valores
+                const name = formInputs.name.value.trim() || 'Sin nombre';
+                const title = formInputs.title.value.trim() || 'Sin cargo';
+                const company = formInputs.company.value.trim() || 'Sin empresa';
+                const email = formInputs.email.value.trim() || 'email@ejemplo.com';
+                const phone = formInputs.phone.value.trim() || 'Sin teléfono';
+                const github = formInputs.github.value.trim() || '#';
+                const linkedin = formInputs.linkedin.value.trim() || '#';
+
+                // 2. Actualizar textos
+                displayEls.name.textContent = name;
+                displayEls.title.textContent = title;
+                displayEls.company.textContent = company;
+                displayEls.email.textContent = email;
+                displayEls.phone.textContent = phone;
+
+                // Avatar (inicial)
+                const initial = name.charAt(0).toUpperCase() || '?';
+                displayEls.avatar.textContent = initial;
+
+                // Enlaces (mostrar versión corta)
+                const shortGithub = github.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') || 'github.com';
+                const shortLinkedin = linkedin.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '') || 'linkedin.com';
+                displayEls.githubLink.textContent = shortGithub.length > 20 ? shortGithub.substring(0, 18) + '…' : shortGithub;
+                displayEls.linkedinLink.textContent = shortLinkedin.length > 20 ? shortLinkedin.substring(0, 18) + '…' : shortLinkedin;
+                displayEls.githubLink.href = github !== '#' ? github : '#';
+                displayEls.linkedinLink.href = linkedin !== '#' ? linkedin : '#';
+
+                // 3. Generar QR con API externa (más fiable que la librería interna)
+                generateQR(name, title, company, email, phone, github, linkedin);
+            }
+
+            // ----- FUNCIÓN QR usando API pública (solución definitiva) -----
+            function generateQR(name, title, company, email, phone, github, linkedin) {
+                // Construir vCard estándar (formato universal para móviles)
+                const vcard = [
+                    'BEGIN:VCARD',
+                    'VERSION:3.0',
+                    `FN:${name}`,
+                    `N:${name.split(' ').slice(-1).join(' ')};${name.split(' ').slice(0, -1).join(' ')};;;`,
+                    `ORG:${company}`,
+                    `TITLE:${title}`,
+                    `TEL:${phone}`,
+                    `EMAIL:${email}`,
+                    `URL:${github}`,
+                    `URL:${linkedin}`,
+                    'END:VCARD'
+                ].join('\n');
+
+                // Usamos la API de qrserver (no necesita librería, solo una imagen)
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(vcard)}`;
+                
+                // Insertar imagen en el contenedor
+                qrContainer.innerHTML = `<img src="${qrUrl}" alt="Código QR" width="100" height="100" crossorigin="anonymous">`;
+            }
+
+            // ----- FUNCIÓN DESCARGAR PNG (con html2canvas) -----
+            function downloadCard() {
+                downloadBtn.disabled = true;
+                downloadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
+
+                const target = cardPreview;
+
+                html2canvas(target, {
+                    scale: 2.5,
+                    backgroundColor: window.getComputedStyle(target).backgroundColor || '#ffffff',
+                    allowTaint: false,
+                    useCORS: true, // Importante para que la imagen QR (de la API) se renderice
+                    logging: false,
+                    borderRadius: '20px'
+                }).then((canvas) => {
+                    const link = document.createElement('a');
+                    link.download = `tarjeta_${displayEls.name.textContent.replace(/\s+/g, '_')}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+
+                    downloadBtn.disabled = false;
+                    downloadBtn.innerHTML = '<i class="fas fa-download"></i> Descargar PNG';
+                }).catch((error) => {
+                    console.error('Error al capturar:', error);
+                    alert('Error al generar la imagen. Revisa la consola.');
+                    downloadBtn.disabled = false;
+                    downloadBtn.innerHTML = '<i class="fas fa-download"></i> Descargar PNG';
+                });
+            }
+
+            // ----- MODO OSCURO / CLARO -----
+            const themeToggle = document.getElementById('themeToggle');
+            const htmlElement = document.documentElement;
+
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            htmlElement.setAttribute('data-theme', savedTheme);
+            updateThemeIcon(savedTheme);
+
+            themeToggle.addEventListener('click', () => {
+                const currentTheme = htmlElement.getAttribute('data-theme');
+                const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+                htmlElement.setAttribute('data-theme', newTheme);
+                localStorage.setItem('theme', newTheme);
+                updateThemeIcon(newTheme);
+            });
+
+            function updateThemeIcon(theme) {
+                const icon = themeToggle.querySelector('i');
+                icon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+            }
+
+            // ----- EVENTOS -----
+            generateBtn.addEventListener('click', updateCard);
+
+            // Actualizar también al presionar Enter
+            Object.values(formInputs).forEach(input => {
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        generateBtn.click();
+                    }
+                });
+            });
+
+            downloadBtn.addEventListener('click', downloadCard);
+
+            // ----- INICIALIZAR PRIMERA TARJETA (para que muestre algo al abrir) -----
+            updateCard();
+        });
+    </script>
+</body>
+</html>
